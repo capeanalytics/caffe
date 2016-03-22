@@ -17,6 +17,7 @@ void AccuracyLayer<Dtype>::LayerSetUp(
   if (has_ignore_label_) {
     ignore_label_ = this->layer_param_.accuracy_param().ignore_label();
   }
+  threshold_ = this->layer_param_.accuracy_param().threshold();
 }
 
 template <typename Dtype>
