@@ -95,3 +95,4 @@ class Classifier(caffe.Net):
             predictions = predictions.mean(1)
 
         return predictions
+
