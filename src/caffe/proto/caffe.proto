@@ -440,12 +440,20 @@ message LossParameter {
     BATCH_SIZE = 2;
     // Do not normalize the loss.
     NONE = 3;
+    // 
+    IGNORE_OUTLIERS = 4;
   }
   optional NormalizationMode normalization = 3 [default = VALID];
   // Deprecated.  Ignored if normalization is specified.  If normalization
   // is not specified, then setting this to false will be equivalent to
   // normalization = BATCH_SIZE to be consistent with previous behavior.
   optional bool normalize = 2;
+  
+  // default: -1.0 (no outliers are removed); valid range (0.0; 1.0), 0.0 indicating that none are
+  // removed, and 1.0 means that all examples would be ignored. for instance, setting this to 0.1
+  // means that the 10% outliers with the highest loss are not considered for loss computation in 
+  // the forward pass, and consequently are also ignored in the backward step
+  optional float ignore_outliers_fraction = 4 [default = -1.0];    
 }
 
 // Messages that store parameters used by individual layer types follow, in
