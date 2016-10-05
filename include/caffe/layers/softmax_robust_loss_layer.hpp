@@ -2,6 +2,7 @@
 #define CAFFE_SOFTMAX_WITH_ROBUST_LOSS_LAYER_HPP_
 
 #include <vector>
+#include <deque>
 
 #include "caffe/blob.hpp"
 #include "caffe/layer.hpp"
@@ -66,8 +67,8 @@ class SoftmaxWithRobustLossLayer : public LossLayer<Dtype> {
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
-  //virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
-  //    const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
   /**
    * @brief Computes the softmax loss error gradient w.r.t. the predictions.
    *
@@ -97,8 +98,8 @@ class SoftmaxWithRobustLossLayer : public LossLayer<Dtype> {
    */
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
-  //virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
-  //    const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 
   /// The internal SoftmaxLayer used to map predictions to a distribution.
   shared_ptr<Layer<Dtype> > softmax_layer_;
@@ -111,9 +112,23 @@ class SoftmaxWithRobustLossLayer : public LossLayer<Dtype> {
   /// How to normalize the output loss.
   LossParameter_NormalizationMode normalization_;
   
-  float ignore_outliers_fraction_;
+  int method_;  
+  
+  Dtype ignore_outliers_fraction_;
   std::vector<std::pair<Dtype, int> > outliers_;
   int num_ignored_;
+  
+  Dtype stdev_z_value_;
+  int loss_cache_size_;
+  std::deque<Dtype> loss_cache_;
+  std::deque<Dtype> residual_cache_;
+  std::vector<Dtype> sorted_cache_;
+  std::vector<bool> is_outlier_;
+  int num_inliers_;
+  
+  Dtype retained_inlier_fraction_;
+  int batch_count_;
+  int min_batch_count_;
 
   int softmax_axis_, outer_num_, inner_num_;
 };

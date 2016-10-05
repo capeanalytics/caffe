@@ -454,6 +454,11 @@ message LossParameter {
   // means that the 10% outliers with the highest loss are not considered for loss computation in 
   // the forward pass, and consequently are also ignored in the backward step
   optional float ignore_outliers_fraction = 4 [default = -1.0];    
+  
+  optional float stdev_z_value = 5 [default = -1.0];    
+  optional uint32 loss_cache_size = 6 [default = 100]; 
+  
+  optional float retained_inlier_fraction = 7 [default = -1.0];
 }
 
 // Messages that store parameters used by individual layer types follow, in
