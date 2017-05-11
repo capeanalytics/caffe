@@ -6,6 +6,11 @@ if(POLICY CMP0054)
   cmake_policy(SET CMP0054 NEW)
 endif()
 
+IF(CMAKE_VERSION VERSION_GREATER "2.8.11")
+  CMAKE_POLICY(SET CMP0022 OLD)
+ENDIF()
+
+
 # ---[ Caffe project
 project(Caffe C CXX)
 set(CAFFE_VERSION "" CACHE STRING "Version number")
