@@ -11,7 +11,7 @@ except:
 import numpy as np
 
 from ._caffe import Net, SGDSolver, NesterovSolver, AdaGradSolver, \
-        RMSPropSolver, AdaDeltaSolver, AdamSolver
+        RMSPropSolver, AdaDeltaSolver, AdamSolver, NCCL, Timer
 import caffe.io
 
 import six
@@ -27,7 +27,9 @@ def _Net_blobs(self):
     An OrderedDict (bottom to top, i.e., input to output) of network
     blobs indexed by name
     """
-    return OrderedDict(zip(self._blob_names, self._blobs))
+    if not hasattr(self, '_blobs_dict'):
+        self._blobs_dict = OrderedDict(zip(self._blob_names, self._blobs))
+    return self._blobs_dict
 
 
 @property
@@ -36,7 +38,20 @@ def _Net_blob_loss_weights(self):
     An OrderedDict (bottom to top, i.e., input to output) of network
     blob loss weights indexed by name
     """
-    return OrderedDict(zip(self._blob_names, self._blob_loss_weights))
+    if not hasattr(self, '_blobs_loss_weights_dict'):
+        self._blob_loss_weights_dict = OrderedDict(zip(self._blob_names,
+                                                       self._blob_loss_weights))
+    return self._blob_loss_weights_dict
+
+@property
+def _Net_layer_dict(self):
+    """
+    An OrderedDict (bottom to top, i.e., input to output) of network
+    layers indexed by name
+    """
+    if not hasattr(self, '_layer_dict'):
+        self._layer_dict = OrderedDict(zip(self._layer_names, self.layers))
+    return self._layer_dict
 
 
 @property
@@ -46,19 +61,28 @@ def _Net_params(self):
     parameters indexed by name; each is a list of multiple blobs (e.g.,
     weights and biases)
     """
-    return OrderedDict([(name, lr.blobs)
-                        for name, lr in zip(self._layer_names, self.layers)
-                        if len(lr.blobs) > 0])
+    if not hasattr(self, '_params_dict'):
+        self._params_dict = OrderedDict([(name, lr.blobs)
+                                        for name, lr in zip(
+                                            self._layer_names, self.layers)
+                                        if len(lr.blobs) > 0])
+    return self._params_dict
 
 
 @property
 def _Net_inputs(self):
-    return [list(self.blobs.keys())[i] for i in self._inputs]
+    if not hasattr(self, '_input_list'):
+        keys = list(self.blobs.keys())
+        self._input_list = [keys[i] for i in self._inputs]
+    return self._input_list
 
 
 @property
 def _Net_outputs(self):
-    return [list(self.blobs.keys())[i] for i in self._outputs]
+    if not hasattr(self, '_output_list'):
+        keys = list(self.blobs.keys())
+        self._output_list = [keys[i] for i in self._outputs]
+    return self._output_list
 
 
 def _Net_forward(self, blobs=None, start=None, end=None, **kwargs):
@@ -89,7 +113,7 @@ def _Net_forward(self, blobs=None, start=None, end=None, **kwargs):
 
     if end is not None:
         end_ind = list(self._layer_names).index(end)
-        outputs = set([end] + blobs)
+        outputs = set(self.top_names[end] + blobs)
     else:
         end_ind = len(self.layers) - 1
         outputs = set(self.outputs + blobs)
@@ -137,7 +161,7 @@ def _Net_backward(self, diffs=None, start=None, end=None, **kwargs):
 
     if end is not None:
         end_ind = list(self._layer_names).index(end)
-        outputs = set([end] + diffs)
+        outputs = set(self.bottom_names[end] + diffs)
     else:
         end_ind = 0
         outputs = set(self.inputs + diffs)
@@ -278,25 +302,36 @@ def _Net_batch(self, blobs):
                                                  padding])
         yield padded_batch
 
-
-class _Net_IdNameWrapper:
+def _Net_get_id_name(func, field):
     """
-    A simple wrapper that allows the ids propery to be accessed as a dict
-    indexed by names. Used for top and bottom names
-    """
-    def __init__(self, net, func):
-        self.net, self.func = net, func
+    Generic property that maps func to the layer names into an OrderedDict.
 
-    def __getitem__(self, name):
-        # Map the layer name to id
-        ids = self.func(self.net, list(self.net._layer_names).index(name))
-        # Map the blob id to name
-        id_to_name = list(self.net.blobs)
-        return [id_to_name[i] for i in ids]
+    Used for top_names and bottom_names.
+
+    Parameters
+    ----------
+    func: function id -> [id]
+    field: implementation field name (cache)
+
+    Returns
+    ------
+    A one-parameter function that can be set as a property.
+    """
+    @property
+    def get_id_name(self):
+        if not hasattr(self, field):
+            id_to_name = list(self.blobs)
+            res = OrderedDict([(self._layer_names[i],
+                                [id_to_name[j] for j in func(self, i)])
+                                for i in range(len(self.layers))])
+            setattr(self, field, res)
+        return getattr(self, field)
+    return get_id_name
 
 # Attach methods to Net.
 Net.blobs = _Net_blobs
 Net.blob_loss_weights = _Net_blob_loss_weights
+Net.layer_dict = _Net_layer_dict
 Net.params = _Net_params
 Net.forward = _Net_forward
 Net.backward = _Net_backward
@@ -306,5 +341,5 @@ Net.set_input_arrays = _Net_set_input_arrays
 Net._batch = _Net_batch
 Net.inputs = _Net_inputs
 Net.outputs = _Net_outputs
-Net.top_names = property(lambda n: _Net_IdNameWrapper(n, Net._top_ids))
-Net.bottom_names = property(lambda n: _Net_IdNameWrapper(n, Net._bottom_ids))
+Net.top_names = _Net_get_id_name(Net._top_ids, "_top_names")
+Net.bottom_names = _Net_get_id_name(Net._bottom_ids, "_bottom_names")
