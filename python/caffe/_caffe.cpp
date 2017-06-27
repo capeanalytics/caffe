@@ -68,6 +68,32 @@ void Log(const string& s) {
   LOG(INFO) << s;
 }
 
+void Cape_InitLog(const string& log_dir) {
+  ::google::InitGoogleLogging("pycaffe");
+  ::google::InstallFailureSignalHandler();
+  string _tmp = "";
+  _tmp = log_dir + "pycaffe.INFO.";
+  ::google::SetLogDestination(::google::GLOG_INFO, _tmp.c_str());
+  _tmp = log_dir + "pycaffe.WARNING.";
+  ::google::SetLogDestination(::google::GLOG_WARNING, _tmp.c_str());
+  _tmp = log_dir + "pycaffe.ERROR.";
+  ::google::SetLogDestination(::google::GLOG_ERROR, _tmp.c_str());
+  _tmp = log_dir + "pycaffe.FATAL.";
+  ::google::SetLogDestination(::google::GLOG_FATAL, _tmp.c_str());
+}
+void Cape_InitLogLevel(const string& log_dir, int level) {
+  FLAGS_minloglevel = level;
+  Cape_InitLog(log_dir);
+}
+void Cape_InitLogLevelPipe(const string& log_dir, int level, bool stderr) {
+  FLAGS_minloglevel = level;
+  FLAGS_alsologtostderr = stderr; // log to console *AND* logfile if set to true
+  FLAGS_logbuflevel = -1; // omit buffering because otherwise the last part in the logfiles is cut-off. 0 means buffer INFO only
+  Cape_InitLog(log_dir);
+}
+int Cape_get_mode_cpu() { return Caffe::CPU; }
+int Cape_get_mode_gpu() { return Caffe::GPU; }
+
 void set_random_seed(unsigned int seed) { Caffe::set_random_seed(seed); }
 
 // For convenience, check that input files can be opened, and raise an
@@ -388,10 +414,15 @@ BOOST_PYTHON_MODULE(_caffe) {
   bp::def("init_log", &InitLog);
   bp::def("init_log", &InitLogLevel);
   bp::def("init_log", &InitLogLevelPipe);
+  bp::def("cape_init_log", &Cape_InitLog);
+  bp::def("cape_init_log", &Cape_InitLogLevel);
+  bp::def("cape_init_log", &Cape_InitLogLevelPipe);
   bp::def("log", &Log);
   bp::def("has_nccl", &HasNCCL);
   bp::def("set_mode_cpu", &set_mode_cpu);
   bp::def("set_mode_gpu", &set_mode_gpu);
+  bp::def("cape_get_mode_cpu", &Cape_get_mode_cpu);
+  bp::def("cape_get_mode_gpu", &Cape_get_mode_gpu);
   bp::def("set_random_seed", &set_random_seed);
   bp::def("set_device", &Caffe::SetDevice);
   bp::def("solver_count", &Caffe::solver_count);
