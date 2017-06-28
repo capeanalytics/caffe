@@ -69,16 +69,16 @@ void Log(const string& s) {
 }
 
 void Cape_InitLog(const string& log_dir) {
-  ::google::InitGoogleLogging("pycaffe");
+  ::google::InitGoogleLogging("caffe");
   ::google::InstallFailureSignalHandler();
   string _tmp = "";
-  _tmp = log_dir + "pycaffe.INFO.";
+  _tmp = log_dir + "caffe.INFO.";
   ::google::SetLogDestination(::google::GLOG_INFO, _tmp.c_str());
-  _tmp = log_dir + "pycaffe.WARNING.";
+  _tmp = log_dir + "caffe.WARNING.";
   ::google::SetLogDestination(::google::GLOG_WARNING, _tmp.c_str());
-  _tmp = log_dir + "pycaffe.ERROR.";
+  _tmp = log_dir + "caffe.ERROR.";
   ::google::SetLogDestination(::google::GLOG_ERROR, _tmp.c_str());
-  _tmp = log_dir + "pycaffe.FATAL.";
+  _tmp = log_dir + "caffe.FATAL.";
   ::google::SetLogDestination(::google::GLOG_FATAL, _tmp.c_str());
 }
 void Cape_InitLogLevel(const string& log_dir, int level) {
